@@ -1,0 +1,128 @@
+service: ai-blog-writer
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: dev
+  region: us-east-1
+  timeout: 300
+  environment:
+    GOOGLE_API_KEY: 'AIzaSyBUA3HVOdakFOFGQ0V59ZyjlMvyXDqpClg'
+    PERPLEXITY_API_KEY: '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'
+    SANITY_PROJECT_ID: 'tbrj2u0q'
+    SANITY_DATASET: 'production'
+    SANITY_API_TOKEN: 'skRJLDwpzVkFr5JToLwEWHOQjuz5Vg4rBo97MxjswobSk0vO4srUunUAC0PoE3BTZvf5XdlbzcN3cGr3ttqosCFNVugweRS8HOW48U8zzzbMjcXWw1aAkXpTeFaKid0wG6Az0UBj5hX0jDPRlA6PKf4O9fXO2234DsicAaMGdk2IixVzszxG'
+
+functions:
+  analyzeWebsite:
+    handler: src/handlers/analyzeWebsite.handler
+    events:
+      - http:
+          path: /analyze-website
+          method: post
+          cors: true
+
+  perplexitySearch1:
+    handler: src/handlers/perplexitySearch1.handler
+    events:
+      - http:
+          path: /perplexity-search-1
+          method: post
+          cors: true
+
+  perplexitySearch2:
+    handler: src/handlers/perplexitySearch2.handler
+    events:
+      - http:
+          path: /perplexity-search-2
+          method: post
+          cors: true
+
+  generateKeywords:
+    handler: src/handlers/generateKeywords.handler
+    events:
+      - http:
+          path: /generate-keywords
+          method: post
+          cors: true
+
+  clusterKeywords:
+    handler: src/handlers/clusterKeywords.handler
+    events:
+      - http:
+          path: /cluster-keywords
+          method: post
+          cors: true
+
+  gapAnalysis:
+    handler: src/handlers/gapAnalysis.handler
+    events:
+      - http:
+          path: /gap-analysis
+          method: post
+          cors: true
+
+  createOutline:
+    handler: src/handlers/createOutline.handler
+    events:
+      - http:
+          path: /create-outline
+          method: post
+          cors: true
+
+  writeBlogIntro:
+    handler: src/handlers/writeBlogIntro.handler
+    events:
+      - http:
+          path: /write-blog-intro
+          method: post
+          cors: true
+
+  writeBlogContent:
+    handler: src/handlers/writeBlogContent.handler
+    events:
+      - http:
+          path: /write-blog-content
+          method: post
+          cors: true
+
+  writeBlogConclusion:
+    handler: src/handlers/writeBlogConclusion.handler
+    events:
+      - http:
+          path: /write-blog-conclusion
+          method: post
+          cors: true
+
+  finalEdit:
+    handler: src/handlers/finalEdit.handler
+    events:
+      - http:
+          path: /final-edit
+          method: post
+          cors: true
+
+  publishToSanity:
+    handler: src/handlers/publishToSanity.handler
+    events:
+      - http:
+          path: /publish-to-sanity
+          method: post
+          cors: true
+
+  orchestrator:
+    handler: src/handlers/orchestrator.handler
+    events:
+      - http:
+          path: /create-blog
+          method: post
+          cors: true
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3000

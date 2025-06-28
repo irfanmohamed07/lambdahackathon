@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Blog Writer</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .loading { display: none; text-align: center; margin: 20px 0; }
+        .result { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>🤖 AI Blog Writer</h1>
+    <p>Automated SEO blog creation using LangChain + AWS Lambda</p>
+    
+    <form id="blogForm">
+        <div class="form-group">
+            <label for="url">Website URL *</label>
+            <input type="url" id="url" required placeholder="https://example.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="topic">Blog Topic (Optional)</label>
+            <input type="text" id="topic" placeholder="e.g., Best eco-friendly phones">
+        </div>
+        
+        <div class="form-group">
+            <label for="keywords">Target Keywords (Optional)</label>
+            <textarea id="keywords" placeholder="eco friendly phones, sustainable smartphones"></textarea>
+        </div>
+        
+        <button type="submit">🚀 Create AI Blog</button>
+    </form>
+    
+    <div class="loading" id="loading">
+        <p>⏳ Creating your AI blog... This may take 2-3 minutes.</p>
+    </div>
+    
+    <div id="result"></div>
+    
+    <script>
+        document.getElementById('blogForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            loading.style.display = 'block';
+            result.innerHTML = '';
+            
+            const data = {
+                url: document.getElementById('url').value,
+                selectedTopic: document.getElementById('topic').value,
+                targetKeywords: document.getElementById('keywords').value.split(',').map(k => k.trim()).filter(k => k)
+            };
+            
+            try {
+                const response = await fetch('/create-blog', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const responseData = await response.json();
+                loading.style.display = 'none';
+                
+                if (response.ok && responseData.summary) {
+                    result.innerHTML = `
+                        <div class="result success">
+                            <h3>✅ Blog Created Successfully!</h3>
+                            <p><strong>Title:</strong> ${responseData.summary.blogCreated.title}</p>
+                            <p><strong>Word Count:</strong> ${responseData.summary.blogCreated.wordCount}</p>
+                            <p><strong>SEO Score:</strong> ${responseData.summary.blogCreated.seoScore}/100</p>
+                            <p><strong>Sanity URL:</strong> <a href="${responseData.summary.blogCreated.sanityUrl}" target="_blank">View Blog</a></p>
+                        </div>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="result error">
+                            <h3>❌ Error</h3>
+                            <p>${responseData.error || 'Unknown error occurred'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                result.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ Network Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Blog Writer - LangChain + AWS Lambda</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .form-container {
+            padding: 40px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input[type="url"], input[type="text"], textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="url"]:focus, input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            font-weight: 600;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result {
+            display: none;
+            padding: 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e1e1e1;
+        }
+        
+        .result.show {
+            display: block;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .blog-details {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e1e1e1;
+        }
+        
+        .blog-details h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .detail-value {
+            color: #333;
+        }
+        
+        .progress {
+            margin: 20px 0;
+        }
+        
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 10px 5px;
+            font-size: 12px;
+            color: #666;
+            border-right: 1px solid #e1e1e1;
+        }
+        
+        .step:last-child {
+            border-right: none;
+        }
+        
+        .step.active {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .step.completed {
+            color: #28a745;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI Blog Writer</h1>
+            <p>Automated SEO blog creation using LangChain + AWS Lambda</p>
+        </div>
+        
+        <div class="form-container">
+            <form id="blogForm">
+                <div class="form-group">
+                    <label for="url">Website URL *</label>
+                    <input type="url" id="url" name="url" required 
+                           placeholder="https://example.com">
+                    <small style="color: #666;">Enter the competitor website to analyze</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="topic">Blog Topic (Optional)</label>
+                    <input type="text" id="topic" name="topic" 
+                           placeholder="e.g., Best eco-friendly phones under $500">
+                    <small style="color: #666;">Leave empty to auto-select based on gap analysis</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="keywords">Target Keywords (Optional)</label>
+                    <textarea id="keywords" name="keywords" 
+                              placeholder="eco friendly phones, sustainable smartphones, green technology"></textarea>
+                    <small style="color: #666;">Comma-separated keywords (optional)</small>
+                </div>
+                
+                <button type="submit" class="btn" id="submitBtn">
+                    🚀 Create AI Blog
+                </button>
+            </form>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p id="loadingText">Starting AI blog creation pipeline...</p>
+            
+            <div class="progress">
+                <div class="progress-steps">
+                    <div class="step" id="step1">1. Analyze Website</div>
+                    <div class="step" id="step2">2. Research Competitors</div>
+                    <div class="step" id="step3">3. Content Analysis</div>
+                    <div class="step" id="step4">4. Generate Keywords</div>
+                    <div class="step" id="step5">5. Cluster Topics</div>
+                    <div class="step" id="step6">6. Gap Analysis</div>
+                    <div class="step" id="step7">7. Create Outline</div>
+                    <div class="step" id="step8">8. Write Content</div>
+                    <div class="step" id="step9">9. Final Edit</div>
+                    <div class="step" id="step10">10. Publish</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="result" id="result">
+            <!-- Results will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('blogForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const url = document.getElementById('url').value;
+            const topic = document.getElementById('topic').value;
+            const keywords = document.getElementById('keywords').value;
+            
+            // Show loading state
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('result').classList.remove('show');
+            
+            const steps = [
+                'Analyzing website structure and content...',
+                'Researching competitor popular pages...',
+                'Analyzing content strategy gaps...',
+                'Generating SEO keywords with AI...',
+                'Clustering keywords into topics...',
+                'Performing comprehensive gap analysis...',
+                'Creating detailed blog outline...',
+                'Writing blog content with Gemini...',
+                'Final editing and SEO optimization...',
+                'Publishing to Sanity CMS...'
+            ];
+            
+            let currentStep = 0;
+            const updateProgress = () => {
+                if (currentStep < steps.length) {
+                    document.getElementById('loadingText').textContent = steps[currentStep];
+                    document.getElementById(`step${currentStep + 1}`).classList.add('active');
+                    if (currentStep > 0) {
+                        document.getElementById(`step${currentStep}`).classList.remove('active');
+                        document.getElementById(`step${currentStep}`).classList.add('completed');
+                    }
+                    currentStep++;
+                    setTimeout(updateProgress, 3000); // Update every 3 seconds
+                }
+            };
+            
+            updateProgress();
+            
+            try {
+                // Prepare request data
+                const requestData = { url };
+                if (topic) requestData.selectedTopic = topic;
+                if (keywords) requestData.targetKeywords = keywords.split(',').map(k => k.trim());
+                
+                // Call the orchestrator endpoint
+                const response = await fetch('/create-blog', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('submitBtn').disabled = false;
+                
+                // Show results
+                displayResults(data, response.ok);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('submitBtn').disabled = false;
+                displayError('Network error: ' + error.message);
+            }
+        });
+        
+        function displayResults(data, success) {
+            const resultDiv = document.getElementById('result');
+            
+            if (success && data.summary) {
+                const summary = data.summary;
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Blog created successfully!
+                    </div>
+                    <div class="blog-details">
+                        <h3>📝 Blog Details</h3>
+                        <div class="detail-item">
+                            <span class="detail-label">Title:</span>
+                            <span class="detail-value">${summary.blogCreated.title || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Word Count:</span>
+                            <span class="detail-value">${summary.blogCreated.wordCount || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">SEO Score:</span>
+                            <span class="detail-value">${summary.blogCreated.seoScore || 'N/A'}/100</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Keywords Generated:</span>
+                            <span class="detail-value">${summary.pipeline.keywordsGenerated || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Content Clusters:</span>
+                            <span class="detail-value">${summary.pipeline.clustersCreated || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Gaps Identified:</span>
+                            <span class="detail-value">${summary.pipeline.gapsIdentified || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Processing Time:</span>
+                            <span class="detail-value">${Math.round(summary.pipeline.processingTime / 1000)}s</span>
+                        </div>
+                        ${summary.blogCreated.sanityUrl ? `
+                        <div class="detail-item">
+                            <span class="detail-label">Sanity URL:</span>
+                            <span class="detail-value">
+                                <a href="${summary.blogCreated.sanityUrl}" target="_blank" style="color: #667eea;">View in Sanity</a>
+                            </span>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                displayError(data.error || 'Unknown error occurred');
+            }
+            
+            resultDiv.classList.add('show');
+        }
+        
+        function displayError(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div class="error">
+                    ❌ Error: ${message}
+                </div>
+            `;
+            resultDiv.classList.add('show');
+        }
+    </script>
+</body>
+</html> 
