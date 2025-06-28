@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "test": "jest",
+    "test-mcp": "node test-mcp-integration.js",
+    "view-blogs": "node view-all-blogs.js",
     "deploy": "serverless deploy",
     "dev": "serverless offline"
   },
